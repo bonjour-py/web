@@ -1,0 +1,30 @@
+{{- $service := list "" "www" "static" -}}
+http:
+  middlewares:
+    web:
+      redirectRegex:
+        regex: ^https://(.*)
+        replacement: https://www.$1
+  services:
+    {{- range $i := $service  }}
+      {{- if $i }}
+    web-{{$i}}:
+      loadBalancer:
+        servers:
+          - url: https://bonjour-zone-{{ $i }}.oss-cn-beijing-internal.aliyuncs.com
+      {{- end }}
+    {{- end }}
+  routers:
+    {{- range $i := $service  }}
+    web{{if $i }}-{{end}}{{$i}}:
+      entryPoints: https
+      {{- if $i }}
+      rule: Host(`{{ $i }}.bonjour.zone`)
+      service: web-{{ $i }}
+      {{- else }}
+      rule: Host(`bonjour.zone`)
+      middlewares:
+        - web
+      service: web-www
+      {{- end }}
+    {{- end }}

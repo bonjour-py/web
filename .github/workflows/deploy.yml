@@ -1,0 +1,33 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy_ssh:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - host: 1.bj.aliyun.bonjour.zone
+            pubkey: AAAAC3NzaC1lZDI1NTE5AAAAIFij2QuvS/uuJh9/8DhMLPl50eTeWixEGEb9oHwBKjba
+    steps:
+      - name: Make ssh directory
+        run: mkdir ~/.ssh 
+      - name: Configure ssh known_hosts
+        run: echo '${{ matrix.host }} ssh-ed25519 ${{ matrix.pubkey }}' >> ~/.ssh/known_hosts
+      - name: Configure ssh private key
+        run: echo '${{ secrets.SSH_KEY }}' >> ~/.ssh/id_ed25519; chmod u=rw,go= ~/.ssh/id_ed25519
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Configure service proxy
+        run: mkdir proxy.container.d; mv proxy.conf proxy.container.d/web.conf
+      - name: Make service directory
+        run: ssh service@${{ matrix.host }} mkdir -p /home/service/.config/containers/systemd/web
+      - name: deploy service
+        run: rsync -v -p -r * service@${{ matrix.host }}:/home/service/.config/containers/systemd/web
+      - name: load service
+        run: ssh service@${{ matrix.host }} systemctl --user daemon-reload
+      - name: start service proxy
+        run: ssh service@${{ matrix.host }} systemctl --user restart proxy
