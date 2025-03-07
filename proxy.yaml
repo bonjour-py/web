@@ -17,7 +17,8 @@ http:
   routers:
     {{- range $i := $service  }}
     web{{if $i }}-{{end}}{{$i}}:
-      entryPoints: https
+      entryPoints: 
+        - https
       {{- if $i }}
       rule: Host(`{{ $i }}.bonjour.zone`)
       service: web-{{ $i }}
